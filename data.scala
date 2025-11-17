@@ -74,7 +74,7 @@ object Course:
 
   def downloadCoursesOfAllProgrammesOfYear(academicYearId: String): Map[String, Map[String, Course]] = 
     val result = 
-      println("Laddar ner alla kurser frö program:")
+      println("Laddar ner alla kurser för alla program:")
       for p <- Programme.loadAll yield 
         println(s"  $p")
         val courseMap = downloadCoursesOfProgram(p.code, academicYearId).map(c => c.code -> c).toMap
