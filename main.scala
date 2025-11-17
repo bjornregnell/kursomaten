@@ -1,7 +1,5 @@
 package kursomaten
 
-import kursomaten.Programme.downloadAll
-
 val currentYear = "25_26"
 
 val usage = s"""
