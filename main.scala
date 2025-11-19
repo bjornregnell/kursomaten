@@ -27,7 +27,7 @@ def warning(msg: String): Unit = println(Console.YELLOW + s"WARNING: $msg" + Con
   args match
     case Seq(cmd, xs*) if cmd == "--prog" =>
       println("Alla programkoder på LTH:")
-      println(Programme.allProgIds.map(_.id).mkString(" "))
+      println(disk.allSaveProgIds.map(_.id).mkString(" "))
     
     case Seq(cmd, xs*) if cmd == "--crawl" =>
       val years = if xs.isEmpty then Seq(AcademicYear.current) else
@@ -42,7 +42,7 @@ def warning(msg: String): Unit = println(Console.YELLOW + s"WARNING: $msg" + Con
 
       for 
         y <- years
-        pid <- Programme.allProgIds 
+        pid <- disk.allSaveProgIds 
       do
         var retryAttemptsLeft = 100
         while retryAttemptsLeft > 0 do
