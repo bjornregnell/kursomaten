@@ -49,6 +49,17 @@ end Programme
 
 case class Course(code: String, data: Map[String, ujson.Value]) 
 object Course:
+  def loadAllYears: Seq[String] = 
+    os.list(dir).collect{ case p if p.toIO.isDirectory() => p.last }
+
+  def loadAllCodes: Seq[String] = 
+    val xss = for year <- loadAllYears yield
+      val programs = os.list(dir / year).collect{ case p if p.toIO.isDirectory() => p.last }
+      programs.flatMap: prog =>
+        os.list(dir / year / prog).collect: 
+          case p if !p.toIO.isDirectory() => p.last.takeWhile(_ != '-') 
+    xss.flatten.distinct
+
   def saveAllCourses(academicYearId: String, pid: ProgId): Unit =
     val wd = dir / academicYearId / pid.id
   

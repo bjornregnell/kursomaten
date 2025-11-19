@@ -53,6 +53,7 @@ def warning(msg: String): Unit = println(Console.YELLOW + s"WARNING: $msg" + Con
             retryAttemptsLeft -= 1
             println(s"error when downloading: $e")
             println(s"retryAttemptsLeft: $retryAttemptsLeft")
+            Thread.sleep(sleepMillisNotToOverloadServer * (100 - retryAttemptsLeft))
           end try
         end while  
       end for
