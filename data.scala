@@ -78,14 +78,14 @@ object Course:
       then warning(s"File ${wd/metaFile} already exists, not saving.")
       else 
         println(s"Saving ${wd/metaFile}")
-        os.write(wd / metaFile, value.render(escapeUnicode = true), createFolders = true)
+        os.write(wd / metaFile, value.render(escapeUnicode = false), createFolders = true)
 
       if os.exists(wd / syllFile) then
         warning(s"File ${wd/syllFile} already exists, not saving.")
       else 
         println(s"Saving ${wd/syllFile}")
         val syl = download.syllabus(academicYearId, courseCode = courseCode)
-        os.write(wd / syllFile, syl.render(escapeUnicode = true), createFolders = true)
+        os.write(wd / syllFile, syl.render(escapeUnicode = false), createFolders = true)
 
     end for
 
