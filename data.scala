@@ -1,88 +1,80 @@
-package kursomaten
+package kursomaten 
 
-/* 
-Example api-requests:
-https://api.lth.lu.se/lot/courses/programmes?kull=false
-https://api.lth.lu.se/lot/courses?programmeCode=D&academicYearId=18_19
-https://api.lth.lu.se/lot/courses?programmeCode=D
-https://api.lth.lu.se/lot/courses/EDAA85/syllabus/25_26
-https://kurser.lth.se/lot/about
+case class ProgId(id: String)
 
-*/
+case class AcademicYear(fall_spring: String)
+object AcademicYear:
+  def current: String =
+    import java.util.{GregorianCalendar, Calendar}
+    val year: Int = Calendar.getInstance.get(Calendar.YEAR)
+    val monthZeroBased: Int = Calendar.getInstance.get(Calendar.MONTH)
+    val startYear = if monthZeroBased < 6 then year - 1 else year
+    val fall = startYear.toString.takeRight(2)
+    val spring = (startYear + 1).toString.takeRight(2)
+    s"${fall}_${spring}"
 
-
-val dir = 
-  val target = os.pwd / "target" /"lot"
-  os.makeDir.all(target)
-  target
-
-val sleepMillisNotToOverloadServer = 1000
-
-object url:
-  val programmes = "https://api.lth.lu.se/lot/courses/programmes?kull=false"
-
-  def courses(programmeCode: String, academicYearId: String) = 
-    s"https://api.lth.lu.se/lot/courses?programmeCode=$programmeCode&academicYearId=$academicYearId"
-
-  def syllabus(courseCode: String,  academicYearId: String) = 
-    s"https://api.lth.lu.se/lot/courses/$courseCode/syllabus/$academicYearId"
-end url 
-
-case class Programme(code: String, sv: String, en: String)
+case class Programme(pid: ProgId, sv: String, en: String)
 object Programme:
-  val progFile = dir / "programmes.csv" 
-
   def save(ps: Seq[Programme]): Unit = 
-    val lines: String = ps.map(p => s"${p.code}\t${p.sv}\t${p.en}").mkString("\n")
+    val lines: String = ps.map(p => s"${p.pid.id}\t${p.sv}\t${p.en}").mkString("\n")
     os.write(progFile, lines)
   
   lazy val downloadAll: Seq[Programme] = 
-    val data = ujson.read(requests.get(url.programmes).text())
+    val data = download.json(url.programmes)
     val result = data match
       case ujson.Arr(buf) => buf.collect:  
           case ujson.Obj(value) => Some:
             Programme(
-              code = value("programmeCode").value.toString, 
+              pid = ProgId(value("programmeCode").value.toString), 
               sv = value("programme_sv").value.toString,
               en = value("programme_en").value.toString,
             )
       case j => None //throw Exception(s"unexpected json value: $j")
     result.iterator.toSeq.flatten
 
-  lazy val loadAll: Seq[Programme] =
+  lazy val allProgs: Seq[Programme] =
     if os.exists(progFile) then 
       val lines = collection.immutable.ArraySeq.unsafeWrapArray: 
         os.read(progFile).split("\n")
       lines.map: line =>
         val parts = line.split("\t")
-        Programme(parts(0), parts(1), parts(2)) 
+        Programme(ProgId(parts(0)), parts(1), parts(2)) 
     else 
       save(downloadAll)
       downloadAll
   
-  lazy val allProgIds: Seq[String] = loadAll.map(_.code).sorted 
-  
+
+  lazy val allProgIds: Seq[ProgId] = allProgs.map(_.pid).sortBy(_.id) 
+end Programme
+
 case class Course(code: String, data: Map[String, ujson.Value]) 
 object Course:
-  def downloadCoursesOfProgram(programmeCode: String, academicYearId: String): Seq[Course] = 
-    val data = ujson.read(requests.get(url.courses(programmeCode, academicYearId)).text())
-    val result = data match
-      case ujson.Arr(buf) => buf.collect:
-        case ujson.Obj(value) => Some(Course(value("courseCode").value.toString,value.toMap))
-      case j => None //throw Exception(s"unexpected json value: $j")
-    result.iterator.toSeq.flatten
+  def saveAllCourses(academicYearId: String, pid: ProgId): Unit =
+    val wd = dir / academicYearId / pid.id
+  
+    for (courseCode, value) <- download.allCoursesOfProgram(academicYearId, pid) do
+      val id: String = value match
+        case ujson.Obj(value) => value.apply("id").toString
+        case other => 
+          warning(s"Uknown json value: $other")
+          "id-unknown"
+      
+      val metaFile = s"$courseCode-metadata-$id.json"    
+      val syllFile = s"$courseCode-syllabus.json"
+      
+      if os.exists(wd / metaFile) 
+      then warning(Console.YELLOW_B + s"WARNING: File ${wd/metaFile} already exists, not saving." + Console.RESET)
+      else 
+        println(s"Saving ${wd/metaFile}")
+        os.write(wd / metaFile, value.render(escapeUnicode = true), createFolders = true)
 
-  def downloadCoursesOfAllProgrammesOfYear(academicYearId: String): Map[String, Map[String, Course]] = 
-    val result = 
-      println("Laddar ner alla kurser för alla program:")
-      for p <- Programme.loadAll yield 
-        println(s"  $p")
-        val courseMap = downloadCoursesOfProgram(p.code, academicYearId).map(c => c.code -> c).toMap
-        println(courseMap.keySet)
-        Thread.sleep(sleepMillisNotToOverloadServer)
-        p.code -> courseMap
-      end for
-    result.toMap
+      if os.exists(wd / syllFile) then
+        println(s"WARNING: File ${wd/syllFile} already exists, not saving.")
+      else 
+        println(s"Saving ${wd/syllFile}")
+        val syl = download.syllabus(academicYearId, courseCode = courseCode)
+        os.write(wd / syllFile, syl.render(escapeUnicode = true), createFolders = true)
 
-  def downloadSyllabus(courseCode: String, academicYearId: String): ujson.Value = 
-    ujson.read(requests.get(url.syllabus(courseCode, academicYearId)).text())
+    end for
+
+

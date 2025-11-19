@@ -1,43 +1,54 @@
 package kursomaten
 
-val currentYear = "25_26"
-
 val usage = s"""
   --help          show this message
   --prog          show all study programmes at LTH
-  --crawl         download course data for $currentYear
-  --crawl 23 24   download course data for years 23_24, 24_25
+  --crawl         download course data for ${AcademicYear.current}
+  --crawl 23 24   download course data for academic years 23_24 and 24_25
 
   destination dir: $dir
 """
 
-@main def Main(args: String*) =
-  println("*** Kursomaten ***")
+val dir = 
+  val target = os.pwd / "target" /"lot"
+  os.makeDir.all(target)
+  target
 
+val progFile = dir / "programmes.csv"
+
+val sleepMillisNotToOverloadServer = 500
+
+def warning(msg: String): Unit = println(Console.YELLOW_B + msg + Console.RESET)
+
+@main def Main(args: String*) =
+  println(s"*** Välkommen till Kursomaten ***\n")
+  if args.nonEmpty then println(s"args: $args")
+  println(s"innevarande läsår: ${AcademicYear.current}")
   args match
     case Seq(cmd, xs*) if cmd == "--prog" =>
       println("Alla programkoder på LTH:")
-      println(Programme.allProgIds.mkString(", "))
+      println(Programme.allProgIds.map(_.id).mkString(" "))
     
     case Seq(cmd, xs*) if cmd == "--crawl" =>
-      val years = if xs.isEmpty then Seq(currentYear) else
+      val years = if xs.isEmpty then Seq(AcademicYear.current) else
         xs.map: x => 
           val yOpt = x.toIntOption
-          require(yOpt.isDefined, s"bad year argument: $x")
-          s"${yOpt.get}_${yOpt.get + 1}"
+          require(yOpt.isDefined && x.length == 2, s"bad year argument: $x")
+          val fallYear   = (yOpt.get + 100).toString.drop(1)
+          val springYear = (yOpt.get + 101).toString.drop(1)
+          s"${fallYear}_${springYear}"
 
       println(s"Laddar ner alla kurskoder för alla program för läsår: ${years}")
 
-      ???
-      
-      for y <- years do
-        val m = Course.downloadCoursesOfAllProgrammesOfYear(y)
-        println(m)
-        Thread.sleep(2000)
+      for 
+        y <- years
+        pid <- Programme.allProgIds 
+      do
+        Course.saveAllCourses(y, pid)
       end for
     
     case args => 
-      println(s"unknown args $args\n  type --help for more information")
+      println(s"\nUnknown or missing args ${args.mkString(" ")}\n  type --help for more information")
     
   
   
