@@ -38,7 +38,11 @@ case class Syllabus(htmlSoup: String):
   lazy val titles: Seq[String] = html.h1.map(_.linesFromBreaks).flatten
   
   lazy val h2Contents: Seq[(String, Seq[String])] = html.h2Contents
+
   lazy val h2Map: Map[String, Seq[String]] = h2Contents.toMap
+  
   lazy val headings: Seq[String] = h2Map.keys.toSeq
 
   lazy val lines: Seq[String] = html.text().linesFromBreaks
+
+  lazy val text: String = lines.mkString("\n")
