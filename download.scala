@@ -25,18 +25,12 @@ object download:
   def json(fromUrl: String): ujson.Value = ujson.read(requests.get(fromUrl).text())
 
   def allCoursesOfProgram(academicYearId: String, pid: ProgId): Seq[(String, ujson.Value)] = 
-    val data = download.json(url.courses(academicYearId, pid))
-    val result = data match
+    val result = download.json(url.courses(academicYearId, pid)) match
       case ujson.Arr(buf) => buf.collect:
-        case o@ujson.Obj(value) => value("courseCode").value.toString -> o
-      case ujson.Str(_) => ???
-      case ujson.Obj(_) => ???
-      case ujson.Num(_) => ???
-      case ujson.False  => ???
-      case ujson.True   => ???
-      case ujson.Null   => ???
-    result.iterator.toSeq
-
+        case obj@ujson.Obj(value) => value("courseCode").value.toString -> obj
+      case other => Seq()
+    result.toSeq 
+    
   def syllabus(academicYearId: String, courseCode: String): ujson.Value = 
     download.json(url.syllabus(academicYearId, courseCode))
 

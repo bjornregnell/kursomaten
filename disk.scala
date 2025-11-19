@@ -1,17 +1,22 @@
 package kursomaten
 
 object disk:
-  def loadAllYears: Seq[String] = 
+  lazy val loadAllYears: Seq[String] = 
     os.list(dir).collect{ case p if p.toIO.isDirectory() => p.last }
 
-  def loadAllCodes: Seq[(String, String, String)] = 
+  lazy val loadAllCourses: Seq[Course] = 
     val xss = for year <- loadAllYears yield
       val programs = os.list(dir / year).collect{ case p if p.toIO.isDirectory() => p.last }
       programs.flatMap: prog =>
         os.list(dir / year / prog).collect: 
           case p if !p.toIO.isDirectory() => 
-            (p.last.takeWhile(_ != '-'), year, prog)  
+            Course(p.last.takeWhile(_ != '-'), AcademicYear(year), ProgId(prog))  
     xss.flatten.distinct
+  
+  lazy val loadAllDistinctCodes = loadAllCourses.map(_.code).distinct.sorted
+
+  lazy val loadSyllabusMap: Map[Course, Syllabus] = ???
+  
 
   def saveAllCourses(academicYearId: String, pid: ProgId): Unit =
     val wd = dir / academicYearId / pid.id
