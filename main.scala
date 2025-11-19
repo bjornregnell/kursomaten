@@ -16,9 +16,9 @@ val dir =
 
 val progFile = dir / "programmes.csv"
 
-val sleepMillisNotToOverloadServer = 500
+val sleepMillisNotToOverloadServer = 10
 
-def warning(msg: String): Unit = println(Console.YELLOW_B + msg + Console.RESET)
+def warning(msg: String): Unit = println(Console.YELLOW + s"WARNING: $msg" + Console.RESET)
 
 @main def Main(args: String*) =
   println(s"*** Välkommen till Kursomaten ***\n")
@@ -44,9 +44,18 @@ def warning(msg: String): Unit = println(Console.YELLOW_B + msg + Console.RESET)
         y <- years
         pid <- Programme.allProgIds 
       do
-        Course.saveAllCourses(y, pid)
+        var retryAttemptsLeft = 100
+        while retryAttemptsLeft > 0 do
+          try 
+            Course.saveAllCourses(y, pid)
+            retryAttemptsLeft = 0
+          catch case e: Throwable => 
+            retryAttemptsLeft -= 1
+            println(s"error when downloading: $e")
+            println(s"retryAttemptsLeft: $retryAttemptsLeft")
+          end try
+        end while  
       end for
-    
     case args => 
       println(s"\nUnknown or missing args ${args.mkString(" ")}\n  type --help for more information")
     

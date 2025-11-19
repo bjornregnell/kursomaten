@@ -53,6 +53,7 @@ object Course:
     val wd = dir / academicYearId / pid.id
   
     for (courseCode, value) <- download.allCoursesOfProgram(academicYearId, pid) do
+      Thread.sleep(sleepMillisNotToOverloadServer)
       val id: String = value match
         case ujson.Obj(value) => value.apply("id").toString
         case other => 
@@ -63,13 +64,13 @@ object Course:
       val syllFile = s"$courseCode-syllabus.json"
       
       if os.exists(wd / metaFile) 
-      then warning(Console.YELLOW_B + s"WARNING: File ${wd/metaFile} already exists, not saving." + Console.RESET)
+      then warning(s"File ${wd/metaFile} already exists, not saving.")
       else 
         println(s"Saving ${wd/metaFile}")
         os.write(wd / metaFile, value.render(escapeUnicode = true), createFolders = true)
 
       if os.exists(wd / syllFile) then
-        println(s"WARNING: File ${wd/syllFile} already exists, not saving.")
+        warning(s"File ${wd/syllFile} already exists, not saving.")
       else 
         println(s"Saving ${wd/syllFile}")
         val syl = download.syllabus(academicYearId, courseCode = courseCode)
