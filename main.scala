@@ -47,7 +47,7 @@ def warning(msg: String): Unit = println(Console.YELLOW + s"WARNING: $msg" + Con
         var retryAttemptsLeft = 100
         while retryAttemptsLeft > 0 do
           try 
-            Course.saveAllCourses(y, pid)
+            disk.saveAllCourses(y, pid)
             retryAttemptsLeft = 0
           catch case e: Throwable => 
             retryAttemptsLeft -= 1
